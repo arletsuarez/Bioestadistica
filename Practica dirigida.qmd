@@ -1,0 +1,159 @@
+---
+title: "Practica Desarrollada. Ensayo clínico simulado: dieta y pérdida de peso"
+author: "Arlet Suarez"
+format: html
+editor: visual
+---
+
+# Ensayo clínico simulado: dieta y pérdida de peso
+
+En este tutorial vamos a crear una base de datos simulada en R para un ensayo clínico aleatorizado con 1000 individuos.\
+El objetivo es evaluar la eficacia de una dieta para la pérdida de peso, considerando como desenlace el cambio de peso (kg), la exposición a la dieta, y variables de confusión como edad, género, actividad física y nivel socioeconómico (NSE).
+
+### 
+
+## Librerías necesarias
+
+```{r}
+install.packages("dplyr")
+install.packages("ggplot2")
+```
+
+## Cargar librerías
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+```
+
+## Paso 1: Tamaño muestral
+
+```{r}
+set.seed(123)
+n <- 1000
+```
+
+## 
+
+## Paso 2: Distribuciones población peruana
+
+```{r}
+
+# Edad y sus proporciones 
+grupos_edad <- list(
+  "18-24" = 18:24,
+  "25-34" = 25:34,
+  "35-44" = 35:44,
+  "45-54" = 45:54,
+  "55-60" = 55:60
+)
+
+prop_edad <- c(
+  "18-24" = 0.081,
+  "25-34" = 0.236,
+  "35-44" = 0.221,
+  "45-54" = 0.203,
+  "55-60" = 0.176
+)
+
+# Distribución NSE (según captura)
+prop_nse <- c(
+  "A" = 0.052,
+  "B" = 0.124,
+  "C" = 0.247,
+  "D" = 0.265,
+  "E" = 0.312
+)
+```
+
+## Paso 3: Simulación de variables
+
+```{r}
+
+# Edad (asignando grupo según prop_edad y luego valor aleatorio dentro del rango)
+grupo_asignado <- sample(names(grupos_edad), size=n, replace=TRUE, prob=prop_edad)
+edad <- sapply(grupo_asignado, function(g) sample(grupos_edad[[g]], 1))
+
+# Género (0=femenino, 1=masculino) – se asume 50/50
+genero <- rbinom(n, size=1, prob=0.5)
+
+# Nivel socioeconómico
+nse <- sample(names(prop_nse), size=n, replace=TRUE, prob=prop_nse)
+
+# Exposición a dieta (aleatorización 50/50)
+dieta <- rbinom(n, size=1, prob=0.5)
+
+# Actividad física (frecuencia cardiaca entre 70 y 150)
+actividad <- sample(70:150, size=n, replace=TRUE)
+
+# Pérdida de peso (rango -20 a +20)
+peso <- runif(n, min=-20, max=20)
+
+# Construcción de la base
+base_datos <- data.frame(
+  id = 1:n,
+  edad,
+  genero,
+  nse,
+  dieta,
+  actividad,
+  peso
+)
+
+# Ver las primeras filas
+head(base_datos)
+```
+
+## Paso 4: Verificación distribuciones
+
+```{r}
+# Edad observada vs objetivo
+obs_edad <- prop.table(table(grupo_asignado)) * 100
+target_edad <- prop_edad * 100
+data.frame(Grupo = names(prop_edad),
+           Objetivo = round(target_edad,1),
+           Observado = round(as.numeric(obs_edad),1))
+
+# NSE observada vs objetivo
+obs_nse <- prop.table(table(nse)) * 100
+target_nse <- prop_nse * 100
+data.frame(NSE = names(prop_nse),
+           Objetivo = round(target_nse,1),
+           Observado = round(as.numeric(obs_nse),1))
+```
+
+## Paso 5: Graficos de verificación
+
+```{r}
+# Edad
+df_plot_edad <- data.frame(
+  grupo = rep(names(prop_edad), 2),
+  tipo = rep(c("Objetivo", "Observado"), each = length(prop_edad)),
+  pct = c(target_edad, as.numeric(obs_edad))
+)
+
+ggplot(df_plot_edad, aes(x = grupo, y = pct, fill = tipo)) +
+  geom_col(position = "dodge") +
+  labs(title="Distribución de Edad: Objetivo vs Simulación",
+       x="Grupo de Edad", y="%") +
+  theme_minimal()
+
+# NSE
+df_plot_nse <- data.frame(
+  grupo = rep(names(prop_nse), 2),
+  tipo = rep(c("Objetivo", "Observado"), each = length(prop_nse)),
+  pct = c(target_nse, as.numeric(obs_nse))
+)
+
+ggplot(df_plot_nse, aes(x = grupo, y = pct, fill = tipo)) +
+  geom_col(position = "dodge") +
+  labs(title="Distribución de NSE: Objetivo vs Simulación",
+       x="Nivel Socioeconómico", y="%") +
+  theme_minimal()
+```
+
+## Conclusión
+
+Se logró simular una base de datos de 1000 individuos para un ensayo clínico aleatorizado, incorporando desenlace, exposición y variables de confusión con distribuciones basadas en la población peruana.\
+Las verificaciones muestran que la simulación respeta adecuadamente las distribuciones objetivo de edad y nivel socioeconómico, cumpliendo con los requisitos de la práctica.
